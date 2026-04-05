@@ -7,3 +7,19 @@ document.querySelectorAll('.logout').forEach(btn => {
         }
     });
 });
+
+window.apiCall = async function(method, url, data = null) {
+    const options = {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+    };
+
+    if (data) {
+        options.body = JSON.stringify(data);
+    }
+
+    return fetch(url, options);
+};

@@ -114,6 +114,7 @@ document.querySelectorAll('.ore-slider').forEach(slider => {
         const response = await fetch(`/api/server/${serverId}/ore-probability`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
             body: JSON.stringify({ore_type: ore, probability: parseInt(value)})
         });
 
