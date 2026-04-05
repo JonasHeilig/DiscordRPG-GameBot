@@ -238,7 +238,6 @@ class DatabaseManager:
                            VALUES (?, ?, ?)
                            """, (server_id, gamemaster_id, datetime.now().isoformat()))
 
-            # Setze Standard-Wahrscheinlichkeiten
             cursor.execute("""
                            INSERT INTO ore_probabilities (server_id, coal, iron, gold, copper, diamond, emerald)
                            VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -398,7 +397,6 @@ class DatabaseManager:
         return True
 
     def create_gamemaster_token(self, gamemaster_id, server_id, token):
-        """Erstellt einen neuen Gamemaster Token"""
         conn = self.get_connection()
         cursor = conn.cursor()
         try:

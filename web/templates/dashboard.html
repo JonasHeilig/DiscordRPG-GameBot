@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Minigame Bot{% endblock %}
+
+{% block content %}
+<h1>Server Dashboard</h1>
+
+{% if servers %}
+<div class="servers-table">
+    <table>
+        <thead>
+            <tr>
+                <th>Server ID</th>
+                <th>Gamemaster</th>
+                <th>Register at</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for server in servers %}
+            <tr>
+                <td><code>{{ server.server_id }}</code></td>
+                <td><code>{{ server.gamemaster_id }}</code></td>
+                <td>{{ server.setup_timestamp }}</td>
+                <td>
+                    <a href="{{ url_for('dashboard.server_details', server_id=server.server_id) }}" class="btn btn-small">Details</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="no-data">No Server</p>
+{% endif %}
+{% endblock %}

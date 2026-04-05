@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}User Management - Minigame Bot{% endblock %}
+
+{% block content %}
+<h1>User Management</h1>
+
+<div class="management-container">
+    <div class="user-list">
+        <h2>Spieler</h2>
+        <div class="users-select">
+            {% for user in users %}
+            <button class="user-btn" data-userid="{{ user.user_id }}" data-username="{{ user.username }}">
+                {{ user.username }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="user-actions" id="user-actions" style="display:none;">
+        <h2>Aktionen für: <span id="selected-user">-</span></h2>
+
+        <div class="action-box">
+            <h3>Add Ore</h3>
+            <form id="add-ore-form">
+                <div class="form-group">
+                    <label for="ore-type">Erz:</label>
+                    <select id="ore-type" required>
+                        <option value="coal">Kohle</option>
+                        <option value="iron">Eisen</option>
+                        <option value="gold">Gold</option>
+                        <option value="copper">Kupfer</option>
+                        <option value="diamond">Diamanten</option>
+                        <option value="emerald">Smaragde</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ore-amount">Menge:</label>
+                    <input type="number" id="ore-amount" min="1" value="1" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Hinzufügen</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<a href="{{ url_for('dashboard.server_details', server_id=server_id) }}" class="btn btn-secondary">< Back</a>
+
+<script>
+const serverId = {{ server_id }};
+let selectedUserId = null;
+
+document.querySelectorAll('.user-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        selectedUserId = btn.dataset.userid;
+        document.getElementById('selected-user').textContent = btn.dataset.username;
+        document.getElementById('user-actions').style.display = 'block';
+
+        document.querySelectorAll('.user-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    });
+});
+
+document.getElementById('add-ore-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const ore = document.getElementById('ore-type').value;
+    const amount = parseInt(document.getElementById('ore-amount').value);
+
+    const response = await fetch(`/api/server/${serverId}/user/${selectedUserId}/ore`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ore_type: ore, amount: amount})
+    });
+
+    if (response.ok) {
+        alert(`${amount} ${ore} added!`);
+        document.getElementById('add-ore-form').reset();
+    } else {
+        alert('Error adding ore');
+    }
+});
+</script>
+{% endblock %}

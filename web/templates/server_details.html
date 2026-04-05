@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Server Details - Minigame Bot{% endblock %}
+
+{% block content %}
+<h1>Server: <code>{{ server.server_id }}</code></h1>
+
+<div class="server-info">
+    <h2>Server Information</h2>
+    <table class="info-table">
+        <tr>
+            <td><strong>Server ID:</strong></td>
+            <td><code>{{ server.server_id }}</code></td>
+        </tr>
+        <tr>
+            <td><strong>Gamemaster ID:</strong></td>
+            <td><code>{{ server.gamemaster_id }}</code></td>
+        </tr>
+        <tr>
+            <td><strong>Register at:</strong></td>
+            <td>{{ server.setup_timestamp }}</td>
+        </tr>
+    </table>
+</div>
+
+<div class="section">
+    <h2>Player ({{ users|length }})</h2>
+    {% if users %}
+    <div class="users-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Player</th>
+                    <th>Entered</th>
+                    <th>Coal</th>
+                    <th>Iron</th>
+                    <th>Gold</th>
+                    <th>Copper</th>
+                    <th>Diamond</th>
+                    <th>Emerald</th>
+                    <th>Aktion</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.join_timestamp }}</td>
+                    <td>{{ user.coal }}</td>
+                    <td>{{ user.iron }}</td>
+                    <td>{{ user.gold }}</td>
+                    <td>{{ user.copper }}</td>
+                    <td>{{ user.diamond }}</td>
+                    <td>{{ user.emerald }}</td>
+                    <td>
+                        <a href="{{ url_for('dashboard.user_management', server_id=server.server_id) }}?user={{ user.user_id }}" class="btn btn-small">Manage</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="no-data">No Player at this Server</p>
+    {% endif %}
+</div>
+
+<div class="section">
+    <h2>Possibility</h2>
+    <div class="probabilities-form">
+        <form id="prob-form">
+            <div class="prob-grid">
+                <div class="prob-item">
+                    <label>Coal: <span id="coal-val">{{ probabilities.coal }}%</span></label>
+                    <input type="range" min="0" max="100" value="{{ probabilities.coal }}" data-ore="coal" class="ore-slider">
+                </div>
+                <div class="prob-item">
+                    <label>Iron: <span id="iron-val">{{ probabilities.iron }}%</span></label>
+                    <input type="range" min="0" max="100" value="{{ probabilities.iron }}" data-ore="iron" class="ore-slider">
+                </div>
+                <div class="prob-item">
+                    <label>Gold: <span id="gold-val">{{ probabilities.gold }}%</span></label>
+                    <input type="range" min="0" max="100" value="{{ probabilities.gold }}" data-ore="gold" class="ore-slider">
+                </div>
+                <div class="prob-item">
+                    <label>Copper: <span id="copper-val">{{ probabilities.copper }}%</span></label>
+                    <input type="range" min="0" max="100" value="{{ probabilities.copper }}" data-ore="copper" class="ore-slider">
+                </div>
+                <div class="prob-item">
+                    <label>Diamond: <span id="diamond-val">{{ probabilities.diamond }}%</span></label>
+                    <input type="range" min="0" max="100" value="{{ probabilities.diamond }}" data-ore="diamond" class="ore-slider">
+                </div>
+                <div class="prob-item">
+                    <label>Emerald: <span id="emerald-val">{{ probabilities.emerald }}%</span></label>
+                    <input type="range" min="0" max="100" value="{{ probabilities.emerald }}" data-ore="emerald" class="ore-slider">
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary">< Back</a>
+
+<script>
+const serverId = {{ server.server_id }};
+
+document.querySelectorAll('.ore-slider').forEach(slider => {
+    slider.addEventListener('input', async (e) => {
+        const ore = e.target.dataset.ore;
+        const value = e.target.value;
+
+        document.getElementById(ore + '-val').textContent = value + '%';
+
+        const response = await fetch(`/api/server/${serverId}/ore-probability`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ore_type: ore, probability: parseInt(value)})
+        });
+
+        if (response.ok) {
+            console.log(`${ore} refreshed to ${value}%`);
+        }
+    });
+});
+</script>
+{% endblock %}

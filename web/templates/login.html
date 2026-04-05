@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Minigame Bot{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-box">
+        <h2>WebUI Login</h2>
+        <p>Generate a Token with <code>/auth</code> on Discord</p>
+
+        {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('auth.login') }}">
+            <div class="form-group">
+                <label for="token">Token:</label>
+                <textarea
+                    id="token"
+                    name="token"
+                    placeholder="Place Token here"
+                    required
+                    rows="4"
+                ></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

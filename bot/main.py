@@ -18,7 +18,7 @@ async def on_ready():
     print(f"In {len(bot.guilds)} Servern active")
     try:
         synced = await bot.tree.sync()
-        print(f"🔄 {len(synced)} Slash Commands synced")
+        print(f"{len(synced)} Slash Commands synced")
     except Exception as e:
         print(f"Error by synce: {e}")
 
