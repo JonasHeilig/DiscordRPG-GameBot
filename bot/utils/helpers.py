@@ -1,5 +1,6 @@
 import random
 import secrets
+import asyncio
 from config import ORE_TYPES
 
 
@@ -40,3 +41,9 @@ def validate_mining_time(time_minutes):
         return None
     except (ValueError, TypeError):
         return None
+
+
+async def wait_for_mining(duration_minutes):
+    seconds = duration_minutes * 60
+    await asyncio.sleep(seconds)
+    return True

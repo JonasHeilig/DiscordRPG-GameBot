@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from config import DATABASE_PATH, ORE_TYPES, DEFAULT_ORE_PROBABILITIES
 
 
@@ -114,6 +114,10 @@ class DatabaseManager:
                            INTEGER
                            DEFAULT
                            0,
+                           health
+                           INTEGER
+                           DEFAULT
+                           100,
                            last_mine_timestamp
                            TEXT,
                            PRIMARY
@@ -206,12 +210,59 @@ class DatabaseManager:
                            TEXT
                            NOT
                            NULL,
+                           expires_at
+                           TEXT,
+                           is_permanent
+                           INTEGER
+                           DEFAULT
+                           0,
                            FOREIGN
                            KEY
                        (
                            server_id
                        ) REFERENCES servers
                        (
+                           server_id
+                       )
+                           )
+                       """)
+
+        cursor.execute("""
+                       CREATE TABLE IF NOT EXISTS active_mining_sessions
+                       (
+                           id
+                           INTEGER
+                           PRIMARY
+                           KEY
+                           AUTOINCREMENT,
+                           user_id
+                           INTEGER
+                           NOT
+                           NULL,
+                           server_id
+                           INTEGER
+                           NOT
+                           NULL,
+                           start_time
+                           TEXT
+                           NOT
+                           NULL,
+                           duration_minutes
+                           INTEGER
+                           NOT
+                           NULL,
+                           end_time
+                           TEXT
+                           NOT
+                           NULL,
+                           FOREIGN
+                           KEY
+                       (
+                           user_id,
+                           server_id
+                       ) REFERENCES resources
+                       (
+                           user_id,
                            server_id
                        )
                            )
@@ -297,9 +348,9 @@ class DatabaseManager:
                            """, (user_id, server_id, username, datetime.now().isoformat()))
 
             cursor.execute("""
-                           INSERT INTO resources (user_id, server_id)
-                           VALUES (?, ?)
-                           """, (user_id, server_id))
+                           INSERT INTO resources (user_id, server_id, health)
+                           VALUES (?, ?, ?)
+                           """, (user_id, server_id, 100))
 
             conn.commit()
             conn.close()
@@ -320,7 +371,8 @@ class DatabaseManager:
                               r.gold,
                               r.copper,
                               r.diamond,
-                              r.emerald
+                              r.emerald,
+                              r.health
                        FROM users u
                                 LEFT JOIN resources r ON u.user_id = r.user_id AND u.server_id = r.server_id
                        WHERE u.server_id = ?
@@ -396,14 +448,20 @@ class DatabaseManager:
         conn.close()
         return True
 
-    def create_gamemaster_token(self, gamemaster_id, server_id, token):
+    def create_gamemaster_token(self, gamemaster_id, server_id, token, is_permanent=False, expiry_hours=24):
         conn = self.get_connection()
         cursor = conn.cursor()
         try:
+            expires_at = None
+            if not is_permanent:
+                expires_at = (datetime.now() + timedelta(hours=expiry_hours)).isoformat()
+
             cursor.execute("""
-                           INSERT INTO gamemaster_tokens (gamemaster_id, server_id, token, created_at)
-                           VALUES (?, ?, ?, ?)
-                           """, (gamemaster_id, server_id, token, datetime.now().isoformat()))
+                           INSERT INTO gamemaster_tokens
+                               (gamemaster_id, server_id, token, created_at, expires_at, is_permanent)
+                           VALUES (?, ?, ?, ?, ?, ?)
+                           """, (gamemaster_id, server_id, token, datetime.now().isoformat(), expires_at,
+                                 1 if is_permanent else 0))
             conn.commit()
             conn.close()
             return True
@@ -415,13 +473,26 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute("""
-                       SELECT gamemaster_id, server_id
+                       SELECT gamemaster_id, server_id, is_permanent, expires_at
                        FROM gamemaster_tokens
                        WHERE token = ?
                        """, (token,))
         result = cursor.fetchone()
+
+        if not result:
+            conn.close()
+            return None
+
+        result_dict = dict(result)
+
+        if not result_dict['is_permanent'] and result_dict['expires_at']:
+            expires_at = datetime.fromisoformat(result_dict['expires_at'])
+            if datetime.now() > expires_at:
+                conn.close()
+                return None
+
         conn.close()
-        return dict(result) if result else None
+        return {'gamemaster_id': result_dict['gamemaster_id'], 'server_id': result_dict['server_id']}
 
     def get_gamemaster_tokens(self, gamemaster_id):
         conn = self.get_connection()
@@ -434,3 +505,60 @@ class DatabaseManager:
         tokens = cursor.fetchall()
         conn.close()
         return [dict(t) for t in tokens]
+
+    def create_mining_session(self, user_id, server_id, duration_minutes):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            start_time = datetime.now()
+            end_time = start_time + timedelta(minutes=duration_minutes)
+
+            cursor.execute("""
+                           INSERT INTO active_mining_sessions
+                               (user_id, server_id, start_time, duration_minutes, end_time)
+                           VALUES (?, ?, ?, ?, ?)
+                           """, (user_id, server_id, start_time.isoformat(), duration_minutes, end_time.isoformat()))
+            conn.commit()
+            session_id = cursor.lastrowid
+            conn.close()
+            return session_id
+        except Exception as e:
+            conn.close()
+            return None
+
+    def get_mining_session(self, session_id):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM active_mining_sessions WHERE id = ?", (session_id,))
+        session = cursor.fetchone()
+        conn.close()
+        return dict(session) if session else None
+
+    def is_mining_complete(self, session_id):
+        session = self.get_mining_session(session_id)
+        if not session:
+            return False
+
+        end_time = datetime.fromisoformat(session['end_time'])
+        return datetime.now() >= end_time
+
+    def delete_mining_session(self, session_id):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM active_mining_sessions WHERE id = ?", (session_id,))
+        conn.commit()
+        conn.close()
+        return True
+
+    def update_player_health(self, user_id, server_id, health):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+                       UPDATE resources
+                       SET health = ?
+                       WHERE user_id = ?
+                         AND server_id = ?
+                       """, (max(0, min(100, health)), user_id, server_id))
+        conn.commit()
+        conn.close()
+        return True

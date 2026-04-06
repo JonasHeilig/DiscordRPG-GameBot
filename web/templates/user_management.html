@@ -7,7 +7,7 @@
 
 <div class="management-container">
     <div class="user-list">
-        <h2>Spieler</h2>
+        <h2>Players</h2>
         <div class="users-select">
             {% for user in users %}
             <button class="user-btn" data-userid="{{ user.user_id }}" data-username="{{ user.username }}">
@@ -18,37 +18,40 @@
     </div>
 
     <div class="user-actions" id="user-actions" style="display:none;">
-        <h2>Aktionen für: <span id="selected-user">-</span></h2>
+        <h2>Actions for: <span id="selected-user">-</span></h2>
 
         <div class="action-box">
             <h3>Add Ore</h3>
             <form id="add-ore-form">
                 <div class="form-group">
-                    <label for="ore-type">Erz:</label>
+                    <label for="ore-type">Ore Type:</label>
                     <select id="ore-type" required>
-                        <option value="coal">Kohle</option>
-                        <option value="iron">Eisen</option>
+                        <option value="coal">Coal</option>
+                        <option value="iron">Iron</option>
                         <option value="gold">Gold</option>
-                        <option value="copper">Kupfer</option>
-                        <option value="diamond">Diamanten</option>
-                        <option value="emerald">Smaragde</option>
+                        <option value="copper">Copper</option>
+                        <option value="diamond">Diamond</option>
+                        <option value="emerald">Emerald</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="ore-amount">Menge:</label>
+                    <label for="ore-amount">Amount:</label>
                     <input type="number" id="ore-amount" min="1" value="1" required>
                 </div>
-                <button type="submit" class="btn btn-primary">Hinzufügen</button>
+                <button type="submit" class="btn btn-primary">Add</button>
             </form>
+            <div id="ore-message" class="message" style="margin-top: 10px; display: none;"></div>
         </div>
     </div>
 </div>
 
-<a href="{{ url_for('dashboard.server_details', server_id=server_id) }}" class="btn btn-secondary">< Back</a>
+<a href="{{ url_for('dashboard.server_details', server_id=server_id) }}" class="btn btn-secondary">← Back</a>
 
 <script>
-const serverId = {{ server_id }};
+const serverId = "{{ server_id }}";
 let selectedUserId = null;
+
+console.log("Server ID (string):", serverId);
 
 document.querySelectorAll('.user-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -64,21 +67,48 @@ document.querySelectorAll('.user-btn').forEach(btn => {
 document.getElementById('add-ore-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    if (!selectedUserId) {
+        alert('Please select a player first');
+        return;
+    }
+
     const ore = document.getElementById('ore-type').value;
     const amount = parseInt(document.getElementById('ore-amount').value);
+    const messageEl = document.getElementById('ore-message');
 
-    const response = await fetch(`/api/server/${serverId}/user/${selectedUserId}/ore`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        credentials: 'include',
-        body: JSON.stringify({ore_type: ore, amount: amount})
-    });
+    try {
+        console.log(`Sending request: /api/server/${serverId}/user/${selectedUserId}/ore`);
 
-    if (response.ok) {
-        alert(`${amount} ${ore} added!`);
-        document.getElementById('add-ore-form').reset();
-    } else {
-        alert('Error adding ore');
+        const response = await fetch(`/api/server/${serverId}/user/${selectedUserId}/ore`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
+            body: JSON.stringify({ore_type: ore, amount: amount})
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            messageEl.textContent = `${data.message}`;
+            messageEl.style.color = 'green';
+            messageEl.style.display = 'block';
+            document.getElementById('add-ore-form').reset();
+            setTimeout(() => messageEl.style.display = 'none', 3000);
+        } else {
+            const error = await response.json();
+            messageEl.textContent = `Error: ${error.error} (${error.code})`;
+            messageEl.style.color = 'red';
+            messageEl.style.display = 'block';
+
+            if (response.status === 401) {
+                messageEl.textContent = 'Authentication failed. Please log in again.';
+                setTimeout(() => window.location.href = '/login', 2000);
+            }
+        }
+    } catch (err) {
+        messageEl.textContent = `Network error: ${err.message}`;
+        messageEl.style.color = 'red';
+        messageEl.style.display = 'block';
+        console.error('Request failed:', err);
     }
 });
 </script>

@@ -1,7 +1,8 @@
 import discord
 from discord.ext import commands
+import asyncio
 from bot.database.db_manager import DatabaseManager
-from bot.utils.helpers import calculate_ore_rewards, validate_mining_time
+from bot.utils.helpers import calculate_ore_rewards, validate_mining_time, wait_for_mining
 
 
 class Player(commands.Cog):
@@ -9,7 +10,7 @@ class Player(commands.Cog):
         self.bot = bot
         self.db = DatabaseManager()
 
-    @discord.app_commands.command(name="join-game", description="Trete dem Minigame bei")
+    @discord.app_commands.command(name="join-game", description="Join the mining game")
     async def join_game(self, interaction: discord.Interaction):
         server_id = interaction.guild.id
         user_id = interaction.user.id
@@ -82,6 +83,26 @@ class Player(commands.Cog):
         try:
             await interaction.response.defer()
 
+            session_id = self.db.create_mining_session(user_id, server_id, mining_time)
+
+            embed_start = discord.Embed(
+                title="Mining Started!",
+                description=f"You are now mining for {mining_time} minutes...",
+                color=discord.Color.gold()
+            )
+            await interaction.followup.send(embed=embed_start, ephemeral=True)
+
+            await wait_for_mining(mining_time)
+
+            if not self.db.is_mining_complete(session_id):
+                embed_error = discord.Embed(
+                    title="Mining Error",
+                    description="Something went wrong with your mining session.",
+                    color=discord.Color.red()
+                )
+                await interaction.followup.send(embed=embed_error, ephemeral=True)
+                return
+
             probs = self.db.get_ore_probabilities(server_id)
             probs_dict = {
                 "coal": probs["coal"],
@@ -96,21 +117,24 @@ class Player(commands.Cog):
             for ore_type, amount in rewards.items():
                 self.db.add_ore(user_id, server_id, ore_type, amount)
 
+            self.db.delete_mining_session(session_id)
+
             embed = discord.Embed(
-                title="Finish Mining!",
-                description=f"You have {mining_time} Minutes in the mine",
+                title="Mining Complete! ✅",
+                description=f"You mined for {mining_time} minutes and found the following ore:",
                 color=discord.Color.gold()
             )
 
+            emoji_map = {
+                "coal": "⬛",
+                "iron": "🩶",
+                "gold": "🟨",
+                "copper": "🟧",
+                "diamond": "💎",
+                "emerald": "💚"
+            }
+
             for ore_type, amount in rewards.items():
-                emoji_map = {
-                    "coal": "⬛",
-                    "iron": "🩶",
-                    "gold": "🟨",
-                    "copper": "🟧",
-                    "diamond": "💎",
-                    "emerald": "💚"
-                }
                 embed.add_field(
                     name=f"{emoji_map.get(ore_type, '•')} {ore_type.capitalize()}",
                     value=f"+{amount}",
@@ -127,7 +151,7 @@ class Player(commands.Cog):
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
 
-    @discord.app_commands.command(name="stats", description="Show your Resources")
+    @discord.app_commands.command(name="stats", description="Show your Resources and Health")
     async def stats(self, interaction: discord.Interaction):
 
         server_id = interaction.guild.id
@@ -151,6 +175,14 @@ class Player(commands.Cog):
                 color=discord.Color.blurple()
             )
 
+            health = resources.get('health', 100)
+            health_bar = self._create_health_bar(health)
+            embed.add_field(
+                name="Health",
+                value=f"{health_bar} {health}/100 HP",
+                inline=False
+            )
+
             emoji_map = {
                 "coal": "⬛",
                 "iron": "🩶",
@@ -159,6 +191,8 @@ class Player(commands.Cog):
                 "diamond": "💎",
                 "emerald": "💚"
             }
+
+            embed.add_field(name="Ore Resources", value="⠀", inline=False)
 
             for ore_type in ["coal", "iron", "gold", "copper", "diamond", "emerald"]:
                 amount = resources[ore_type]
@@ -177,6 +211,11 @@ class Player(commands.Cog):
                 color=discord.Color.red()
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    def _create_health_bar(self, health):
+        filled = int(health / 10)
+        empty = 10 - filled
+        return "█" * filled + "░" * empty
 
 
 async def setup(bot):
