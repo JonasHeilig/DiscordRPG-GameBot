@@ -261,8 +261,6 @@ code {
     width: 100%;
 }
 
-.info-table tr
-
 #user-actions {
     transition: opacity 0.3s ease;
 }
@@ -272,8 +270,38 @@ code {
     opacity: 0;
 }
 
-.health-controls {
+.action-box {
+    background-color: #f9f9f9;
+    border-left: 4px solid #4CAF50;
     padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+
+.action-box h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 16px;
+}
+
+.action-box-full {
+    width: 100%;
+}
+
+.action-boxes-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.action-box-half {
+    width: 100%;
+}
+
+.health-controls {
+    padding: 0;
 }
 
 .health-input-group {
@@ -307,6 +335,12 @@ code {
     padding: 6px 12px;
     font-size: 12px;
     font-weight: 500;
+    flex: 1;
+    min-width: 100px;
+}
+
+.btn-full-width {
+    width: 100%;
 }
 
 .btn-success {
@@ -416,19 +450,14 @@ code {
     box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
 }
 
-.action-box {
-    background-color: #f9f9f9;
-    border-left: 4px solid #4CAF50;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 4px;
-}
+@media (max-width: 1024px) {
+    .action-boxes-row {
+        grid-template-columns: 1fr;
+    }
 
-.action-box h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: #333;
-    font-size: 16px;
+    .action-box-half {
+        width: 100%;
+    }
 }
 
 @media (max-width: 768px) {
@@ -448,4 +477,32 @@ code {
     .health-input-group .btn {
         width: 100%;
     }
+
+    .action-boxes-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.health-status {
+    background-color: #e8f5e9;
+    border: 2px solid #4CAF50;
+    border-radius: 6px;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.health-label {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.health-current {
+    font-weight: 700;
+    font-size: 18px;
+    color: #28a745;
+    font-family: 'Courier New', monospace;
 }

@@ -10,7 +10,7 @@
         <h2>Players</h2>
         <div class="users-select">
             {% for user in users %}
-            <button class="user-btn" data-userid="{{ user.user_id }}" data-username="{{ user.username }}">
+            <button class="user-btn" data-userid="{{ user.user_id }}" data-username="{{ user.username }}" data-health="{{ user.health }}">
                 {{ user.username }}
             </button>
             {% endfor %}
@@ -19,12 +19,15 @@
 
     <div class="user-actions" id="user-actions">
         <h2>Actions for: <span id="selected-user">-</span></h2>
-
-        <div class="action-box">
+        <div class="action-box action-box-full">
             <h3>Health Management</h3>
             <div class="health-controls">
+                <div class="health-status">
+                    <span class="health-label">Current Health:</span>
+                    <span class="health-current" id="current-health">-</span>
+                </div>
                 <div class="form-group">
-                    <label for="health-input">Set Health (0-100):</label>
+                    <label for="health-input">Set New Health:</label>
                     <div class="health-input-group">
                         <input type="number" id="health-input" min="0" max="100" value="100" required>
                         <button type="button" class="btn btn-primary" id="set-health-btn">Set Health</button>
@@ -39,50 +42,52 @@
             <div id="health-message" class="message"></div>
         </div>
 
-        <div class="action-box">
-            <h3>Add Ore</h3>
-            <form id="add-ore-form">
-                <div class="form-group">
-                    <label for="ore-type">Ore Type:</label>
-                    <select id="ore-type" required>
-                        <option value="coal">Coal</option>
-                        <option value="iron">Iron</option>
-                        <option value="gold">Gold</option>
-                        <option value="copper">Copper</option>
-                        <option value="diamond">Diamond</option>
-                        <option value="emerald">Emerald</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="ore-amount">Amount:</label>
-                    <input type="number" id="ore-amount" min="1" value="1" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Add Ore</button>
-            </form>
-            <div id="ore-message" class="message"></div>
-        </div>
+        <div class="action-boxes-row">
+            <div class="action-box action-box-half">
+                <h3>Add Ore</h3>
+                <form id="add-ore-form">
+                    <div class="form-group">
+                        <label for="ore-type">Ore Type:</label>
+                        <select id="ore-type" required>
+                            <option value="coal">Coal</option>
+                            <option value="iron">Iron</option>
+                            <option value="gold">Gold</option>
+                            <option value="copper">Copper</option>
+                            <option value="diamond">Diamond</option>
+                            <option value="emerald">Emerald</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="ore-amount">Amount:</label>
+                        <input type="number" id="ore-amount" min="1" value="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full-width">Add Ore</button>
+                </form>
+                <div id="ore-message" class="message"></div>
+            </div>
 
-        <div class="action-box">
-            <h3>Remove Ore</h3>
-            <form id="remove-ore-form">
-                <div class="form-group">
-                    <label for="remove-ore-type">Ore Type:</label>
-                    <select id="remove-ore-type" required>
-                        <option value="coal">Coal</option>
-                        <option value="iron">Iron</option>
-                        <option value="gold">Gold</option>
-                        <option value="copper">Copper</option>
-                        <option value="diamond">Diamond</option>
-                        <option value="emerald">Emerald</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="remove-ore-amount">Amount:</label>
-                    <input type="number" id="remove-ore-amount" min="1" value="1" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Remove Ore</button>
-            </form>
-            <div id="remove-ore-message" class="message"></div>
+            <div class="action-box action-box-half">
+                <h3>Remove Ore</h3>
+                <form id="remove-ore-form">
+                    <div class="form-group">
+                        <label for="remove-ore-type">Ore Type:</label>
+                        <select id="remove-ore-type" required>
+                            <option value="coal">Coal</option>
+                            <option value="iron">Iron</option>
+                            <option value="gold">Gold</option>
+                            <option value="copper">Copper</option>
+                            <option value="diamond">Diamond</option>
+                            <option value="emerald">Emerald</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="remove-ore-amount">Amount:</label>
+                        <input type="number" id="remove-ore-amount" min="1" value="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full-width">Remove Ore</button>
+                </form>
+                <div id="remove-ore-message" class="message"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -92,6 +97,7 @@
 <script>
 const serverId = "{{ server_id }}";
 let selectedUserId = null;
+let currentPlayerHealth = 0;
 let maxHealth = 100;
 
 async function loadServerSettings() {
@@ -110,18 +116,52 @@ async function loadServerSettings() {
     }
 }
 
-loadServerSettings();
+function updateHealthDisplay() {
+    const healthEl = document.getElementById('current-health');
+    healthEl.textContent = `${currentPlayerHealth}/${maxHealth} HP`;
+
+    if (currentPlayerHealth > 50) {
+        healthEl.style.color = '#1fc145';
+    } else if (currentPlayerHealth > 20) {
+        healthEl.style.color = '#f4b807';
+    } else {
+        healthEl.style.color = '#ac0a1d';
+    }
+}
+
+function autoSelectPlayerFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('user');
+
+    if (userId) {
+        const userBtn = document.querySelector(`.user-btn[data-userid="${userId}"]`);
+        if (userBtn) {
+            userBtn.click();
+            console.log("Auto-selected player:", userId);
+        }
+    }
+}
+
+function selectPlayer(btn) {
+    selectedUserId = btn.dataset.userid;
+    currentPlayerHealth = parseInt(btn.dataset.health) || 0;
+
+    document.getElementById('selected-user').textContent = btn.dataset.username;
+    document.getElementById('user-actions').classList.remove('hidden');
+    document.getElementById('health-input').value = currentPlayerHealth;
+
+    updateHealthDisplay();
+
+    document.querySelectorAll('.user-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+}
 
 document.querySelectorAll('.user-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        selectedUserId = btn.dataset.userid;
-        document.getElementById('selected-user').textContent = btn.dataset.username;
-        document.getElementById('user-actions').classList.remove('hidden');
-
-        document.querySelectorAll('.user-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-    });
+    btn.addEventListener('click', () => selectPlayer(btn));
 });
+
+loadServerSettings();
+autoSelectPlayerFromURL();
 
 async function setPlayerHealth(health) {
     if (!selectedUserId) {
@@ -141,6 +181,9 @@ async function setPlayerHealth(health) {
 
         if (response.ok) {
             const data = await response.json();
+            currentPlayerHealth = health;
+            updateHealthDisplay();
+
             messageEl.textContent = `${data.message}`;
             messageEl.classList.add('message-success');
             messageEl.classList.remove('message-error', 'hidden');
@@ -161,6 +204,10 @@ async function setPlayerHealth(health) {
 
 document.getElementById('set-health-btn').addEventListener('click', () => {
     const health = parseInt(document.getElementById('health-input').value);
+    if (health < 0 || health > maxHealth) {
+        alert(`Health must be between 0 and ${maxHealth}`);
+        return;
+    }
     setPlayerHealth(health);
 });
 
@@ -170,16 +217,21 @@ document.getElementById('heal-full-btn').addEventListener('click', () => {
 });
 
 document.getElementById('damage-10-btn').addEventListener('click', () => {
-    const currentHealth = parseInt(document.getElementById('health-input').value);
-    const newHealth = Math.max(0, currentHealth - 10);
+    const newHealth = Math.max(0, currentPlayerHealth - 10);
     document.getElementById('health-input').value = newHealth;
     setPlayerHealth(newHealth);
 });
 
 document.getElementById('kill-btn').addEventListener('click', () => {
-    if (confirm('Are you sure you want to kill this player?')) {
+    if (confirm('Are you sure to kill this player?')) {
         document.getElementById('health-input').value = 0;
         setPlayerHealth(0);
+    }
+});
+
+document.getElementById('health-input').addEventListener('change', () => {
+    const health = parseInt(document.getElementById('health-input').value);
+    if (health >= 0 && health <= maxHealth) {
     }
 });
 
