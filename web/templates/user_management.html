@@ -17,8 +17,27 @@
         </div>
     </div>
 
-    <div class="user-actions" id="user-actions" style="display:none;">
+    <div class="user-actions" id="user-actions">
         <h2>Actions for: <span id="selected-user">-</span></h2>
+
+        <div class="action-box">
+            <h3>Health Management</h3>
+            <div class="health-controls">
+                <div class="form-group">
+                    <label for="health-input">Set Health (0-100):</label>
+                    <div class="health-input-group">
+                        <input type="number" id="health-input" min="0" max="100" value="100" required>
+                        <button type="button" class="btn btn-primary" id="set-health-btn">Set Health</button>
+                    </div>
+                </div>
+                <div class="health-quick-actions">
+                    <button type="button" class="btn btn-small btn-success" id="heal-full-btn">Full Heal</button>
+                    <button type="button" class="btn btn-small btn-warning" id="damage-10-btn">-10 HP</button>
+                    <button type="button" class="btn btn-small btn-danger" id="kill-btn">Kill (0 HP)</button>
+                </div>
+            </div>
+            <div id="health-message" class="message"></div>
+        </div>
 
         <div class="action-box">
             <h3>Add Ore</h3>
@@ -38,9 +57,32 @@
                     <label for="ore-amount">Amount:</label>
                     <input type="number" id="ore-amount" min="1" value="1" required>
                 </div>
-                <button type="submit" class="btn btn-primary">Add</button>
+                <button type="submit" class="btn btn-primary">Add Ore</button>
             </form>
-            <div id="ore-message" class="message" style="margin-top: 10px; display: none;"></div>
+            <div id="ore-message" class="message"></div>
+        </div>
+
+        <div class="action-box">
+            <h3>Remove Ore</h3>
+            <form id="remove-ore-form">
+                <div class="form-group">
+                    <label for="remove-ore-type">Ore Type:</label>
+                    <select id="remove-ore-type" required>
+                        <option value="coal">Coal</option>
+                        <option value="iron">Iron</option>
+                        <option value="gold">Gold</option>
+                        <option value="copper">Copper</option>
+                        <option value="diamond">Diamond</option>
+                        <option value="emerald">Emerald</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="remove-ore-amount">Amount:</label>
+                    <input type="number" id="remove-ore-amount" min="1" value="1" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Remove Ore</button>
+            </form>
+            <div id="remove-ore-message" class="message"></div>
         </div>
     </div>
 </div>
@@ -50,18 +92,95 @@
 <script>
 const serverId = "{{ server_id }}";
 let selectedUserId = null;
+let maxHealth = 100;
 
-console.log("Server ID (string):", serverId);
+async function loadServerSettings() {
+    try {
+        const response = await fetch(`/api/server/${serverId}/settings`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+        if (response.ok) {
+            const settings = await response.json();
+            maxHealth = settings.max_health;
+            console.log("Max Health:", maxHealth);
+        }
+    } catch (err) {
+        console.error("Failed to load settings:", err);
+    }
+}
+
+loadServerSettings();
 
 document.querySelectorAll('.user-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         selectedUserId = btn.dataset.userid;
         document.getElementById('selected-user').textContent = btn.dataset.username;
-        document.getElementById('user-actions').style.display = 'block';
+        document.getElementById('user-actions').classList.remove('hidden');
 
         document.querySelectorAll('.user-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
     });
+});
+
+async function setPlayerHealth(health) {
+    if (!selectedUserId) {
+        alert('Please select a player first');
+        return;
+    }
+
+    const messageEl = document.getElementById('health-message');
+
+    try {
+        const response = await fetch(`/api/server/${serverId}/user/${selectedUserId}/health`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
+            body: JSON.stringify({health: health})
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            messageEl.textContent = `${data.message}`;
+            messageEl.classList.add('message-success');
+            messageEl.classList.remove('message-error', 'hidden');
+            setTimeout(() => messageEl.classList.add('hidden'), 3000);
+        } else {
+            const error = await response.json();
+            messageEl.textContent = `Error: ${error.error}`;
+            messageEl.classList.add('message-error');
+            messageEl.classList.remove('message-success', 'hidden');
+        }
+    } catch (err) {
+        messageEl.textContent = `Network error: ${err.message}`;
+        messageEl.classList.add('message-error');
+        messageEl.classList.remove('message-success', 'hidden');
+        console.error('Request failed:', err);
+    }
+}
+
+document.getElementById('set-health-btn').addEventListener('click', () => {
+    const health = parseInt(document.getElementById('health-input').value);
+    setPlayerHealth(health);
+});
+
+document.getElementById('heal-full-btn').addEventListener('click', () => {
+    document.getElementById('health-input').value = maxHealth;
+    setPlayerHealth(maxHealth);
+});
+
+document.getElementById('damage-10-btn').addEventListener('click', () => {
+    const currentHealth = parseInt(document.getElementById('health-input').value);
+    const newHealth = Math.max(0, currentHealth - 10);
+    document.getElementById('health-input').value = newHealth;
+    setPlayerHealth(newHealth);
+});
+
+document.getElementById('kill-btn').addEventListener('click', () => {
+    if (confirm('Are you sure you want to kill this player?')) {
+        document.getElementById('health-input').value = 0;
+        setPlayerHealth(0);
+    }
 });
 
 document.getElementById('add-ore-form').addEventListener('submit', async (e) => {
@@ -77,8 +196,6 @@ document.getElementById('add-ore-form').addEventListener('submit', async (e) => 
     const messageEl = document.getElementById('ore-message');
 
     try {
-        console.log(`Sending request: /api/server/${serverId}/user/${selectedUserId}/ore`);
-
         const response = await fetch(`/api/server/${serverId}/user/${selectedUserId}/ore`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -89,15 +206,15 @@ document.getElementById('add-ore-form').addEventListener('submit', async (e) => 
         if (response.ok) {
             const data = await response.json();
             messageEl.textContent = `${data.message}`;
-            messageEl.style.color = 'green';
-            messageEl.style.display = 'block';
+            messageEl.classList.add('message-success');
+            messageEl.classList.remove('message-error', 'hidden');
             document.getElementById('add-ore-form').reset();
-            setTimeout(() => messageEl.style.display = 'none', 3000);
+            setTimeout(() => messageEl.classList.add('hidden'), 3000);
         } else {
             const error = await response.json();
-            messageEl.textContent = `Error: ${error.error} (${error.code})`;
-            messageEl.style.color = 'red';
-            messageEl.style.display = 'block';
+            messageEl.textContent = `Error: ${error.error}`;
+            messageEl.classList.add('message-error');
+            messageEl.classList.remove('message-success', 'hidden');
 
             if (response.status === 401) {
                 messageEl.textContent = 'Authentication failed. Please log in again.';
@@ -106,8 +223,54 @@ document.getElementById('add-ore-form').addEventListener('submit', async (e) => 
         }
     } catch (err) {
         messageEl.textContent = `Network error: ${err.message}`;
-        messageEl.style.color = 'red';
-        messageEl.style.display = 'block';
+        messageEl.classList.add('message-error');
+        messageEl.classList.remove('message-success', 'hidden');
+        console.error('Request failed:', err);
+    }
+});
+
+document.getElementById('remove-ore-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    if (!selectedUserId) {
+        alert('Please select a player first');
+        return;
+    }
+
+    const ore = document.getElementById('remove-ore-type').value;
+    const amount = parseInt(document.getElementById('remove-ore-amount').value);
+    const messageEl = document.getElementById('remove-ore-message');
+
+    try {
+        const response = await fetch(`/api/server/${serverId}/user/${selectedUserId}/ore/reduce`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
+            body: JSON.stringify({ore_type: ore, amount: amount})
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            messageEl.textContent = `${data.message}`;
+            messageEl.classList.add('message-success');
+            messageEl.classList.remove('message-error', 'hidden');
+            document.getElementById('remove-ore-form').reset();
+            setTimeout(() => messageEl.classList.add('hidden'), 3000);
+        } else {
+            const error = await response.json();
+            messageEl.textContent = `Error: ${error.error}`;
+            messageEl.classList.add('message-error');
+            messageEl.classList.remove('message-success', 'hidden');
+
+            if (response.status === 401) {
+                messageEl.textContent = 'Authentication failed. Please log in again.';
+                setTimeout(() => window.location.href = '/login', 2000);
+            }
+        }
+    } catch (err) {
+        messageEl.textContent = `Network error: ${err.message}`;
+        messageEl.classList.add('message-error');
+        messageEl.classList.remove('message-success', 'hidden');
         console.error('Request failed:', err);
     }
 });

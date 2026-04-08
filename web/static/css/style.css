@@ -262,3 +262,190 @@ code {
 }
 
 .info-table tr
+
+#user-actions {
+    transition: opacity 0.3s ease;
+}
+
+#user-actions.hidden {
+    display: none;
+    opacity: 0;
+}
+
+.health-controls {
+    padding: 15px;
+}
+
+.health-input-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.health-input-group input {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+}
+
+.health-input-group input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+}
+
+.health-quick-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.btn-success {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+}
+
+.btn-success:active {
+    background-color: #1e7e34;
+    transform: scale(0.98);
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    color: #333;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+}
+
+.btn-warning:active {
+    background-color: #d39e00;
+    transform: scale(0.98);
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.btn-danger:active {
+    background-color: #bd2130;
+    transform: scale(0.98);
+}
+
+.message {
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-top: 10px;
+    font-weight: 500;
+    display: none;
+}
+
+.message.hidden {
+    display: none !important;
+}
+
+.message-success {
+    display: block !important;
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.message-error {
+    display: block !important;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-group select,
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group select:focus,
+.form-group input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+}
+
+.action-box {
+    background-color: #f9f9f9;
+    border-left: 4px solid #4CAF50;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+
+.action-box h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 16px;
+}
+
+@media (max-width: 768px) {
+    .health-quick-actions {
+        flex-direction: column;
+    }
+
+    .health-quick-actions .btn-small {
+        width: 100%;
+    }
+
+    .health-input-group {
+        flex-direction: column;
+    }
+
+    .health-input-group input,
+    .health-input-group .btn {
+        width: 100%;
+    }
+}

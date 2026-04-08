@@ -31,3 +31,5 @@ DEFAULT_ORE_PROBABILITIES = {
     "diamond": 7,
     "emerald": 3
 }
+
+MAX_PLAYER_HEALTH = 100
