@@ -563,51 +563,62 @@ class DatabaseManager:
         conn.close()
         return True
 
-
-def update_player_health(self, user_id, server_id, health):
-    conn = self.get_connection()
-    cursor = conn.cursor()
-    clamped_health = max(0, min(100, health))
-    cursor.execute("""
-                   UPDATE resources
-                   SET health = ?
-                   WHERE user_id = ?
-                     AND server_id = ?
-                   """, (clamped_health, user_id, server_id))
-    conn.commit()
-    conn.close()
-    return True
-
-
-def reduce_ore(self, user_id, server_id, ore_type, amount):
-    if ore_type not in ORE_TYPES:
-        return False
-
-    conn = self.get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute(f"""
-        SELECT {ore_type} FROM resources
-        WHERE user_id = ? AND server_id = ?
-    """, (user_id, server_id))
-
-    result = cursor.fetchone()
-    if not result or result[0] < amount:
+    def update_player_health(self, user_id, server_id, health):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        clamped_health = max(0, min(100, health))
+        cursor.execute("""
+                       UPDATE resources
+                       SET health = ?
+                       WHERE user_id = ?
+                         AND server_id = ?
+                       """, (clamped_health, user_id, server_id))
+        conn.commit()
         conn.close()
-        return False
+        return True
 
-    cursor.execute(f"""
-        UPDATE resources SET {ore_type} = {ore_type} - ?
-        WHERE user_id = ? AND server_id = ?
-    """, (amount, user_id, server_id))
+    def reduce_ore(self, user_id, server_id, ore_type, amount):
+        if ore_type not in ORE_TYPES:
+            return False
 
-    conn.commit()
-    conn.close()
-    return True
+        conn = self.get_connection()
+        cursor = conn.cursor()
 
+        try:
+            cursor.execute(f"""
+                SELECT {ore_type} FROM resources
+                WHERE user_id = ? AND server_id = ?
+            """, (user_id, server_id))
 
-def get_server_settings(self, server_id):
-    return {
-        'max_health': 100,
-        'server_id': server_id
-    }
+            result = cursor.fetchone()
+            if not result:
+                conn.close()
+                print(f"Player not found: {user_id} in server {server_id}")
+                return False
+
+            current_amount = result[0]
+            if current_amount < amount:
+                conn.close()
+                print(f"Not enough {ore_type}: has {current_amount}, tried to remove {amount}")
+                return False
+
+            cursor.execute(f"""
+                UPDATE resources SET {ore_type} = {ore_type} - ?
+                WHERE user_id = ? AND server_id = ?
+            """, (amount, user_id, server_id))
+
+            conn.commit()
+            conn.close()
+            print(f"Ore reduced: {ore_type} -= {amount}")
+            return True
+
+        except Exception as e:
+            print(f"Error reducing ore: {e}")
+            conn.close()
+            return False
+
+    def get_server_settings(self, server_id):
+        return {
+            'max_health': 100,
+            'server_id': server_id
+        }
